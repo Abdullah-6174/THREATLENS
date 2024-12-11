@@ -36,7 +36,8 @@ Below are phishing emails subject+email for your context, you only have to learn
 """
 
 # Initialize Groq API client
-
+# Set your Groq API key securely using environment variables
+groq_api_key = os.getenv('GROQ_API_KEY')  # Use environment variable for API key
 client = Groq(api_key="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")
 
 # Define the function to process the content
@@ -57,7 +58,7 @@ def process_content(content_text):
             {"role": "user", "content": formatted_prompt}
         ],
         temperature=0.5,
-        max_tokens=8170,
+        max_tokens=2048,  # Reduced max_tokens for faster response
         top_p=0.65,
         stream=False,
         stop=None,
@@ -69,30 +70,6 @@ def process_content(content_text):
 
 # Streamlit App UI
 st.set_page_config(page_title="Phishing Content Detector", layout="centered")
-
-# Apply custom CSS for dark theme with red text
-st.markdown(
-    """
-    <style>
-    body {
-        background-color: #1e1e1e;
-        color: #ff4c4c;
-        font-family: 'Comic Sans MS', cursive, sans-serif;
-    }
-    .stTextInput, .stTextArea {
-        background-color: #2b2b2b;
-        color: #ffffff;
-    }
-    .stButton>button {
-        background-color: #ff4c4c;
-        color: #ffffff;
-        font-size: 18px;
-        border-radius: 8px;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
 
 # App Title
 st.title("Phishing Content Detector")
