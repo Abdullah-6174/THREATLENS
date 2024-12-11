@@ -1,0 +1,6 @@
+streamlit
+pandas
+langchain-community
+langchain-huggingface
+groq
+sentence-transformers
