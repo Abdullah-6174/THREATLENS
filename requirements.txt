@@ -4,4 +4,4 @@ langchain-community
 langchain-huggingface
 groq
 sentence-transformers
-faiss-cpu
+faiss-gpu
