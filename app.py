@@ -69,8 +69,11 @@ async def analyze_url(url):
 async def analyze_file(file_obj):
     async with load_virustotal_client() as client:
         try:
-            with open(file_obj.name, "rb") as f:
-                analysis = await client.scan_file_async(f)
+            # Read the file as binary data using file_obj.read()
+            file_data = file_obj.read()
+
+            # Perform the scan on the file data
+            analysis = await client.scan_file_async(file_data)
 
             while True:
                 analysis = await client.get_object_async(f"/analyses/{analysis.id}")
@@ -89,6 +92,7 @@ async def analyze_file(file_obj):
             return stats, detailed_results, suspicious_percentage, malicious_percentage
         except Exception as e:
             return f"Error occurred during file analysis: {str(e)}", "", 0, 0
+
 
 def process_content(content_text):
     retrieved_docs = vector_store.similarity_search(content_text, k=3)
