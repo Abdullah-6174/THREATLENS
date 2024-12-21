@@ -1,8 +1,18 @@
+!pip install gradio
+!pip install pandas
+!pip install groq
+!pip install langchain
+!pip install langchain_community
+!pip install langchain-huggingface
+!pip install vt-py
+!pip install nest-asyncio
+!pip install faiss-gpu
+
 import gradio as gr
 import pandas as pd
 from groq import Groq
 from langchain.prompts import PromptTemplate
-from langchain_community.vectorstores import Chroma
+from langchain_community.vectorstores import FAISS
 from langchain_huggingface import HuggingFaceEmbeddings
 import vt
 import asyncio
@@ -15,7 +25,7 @@ import re
 nest_asyncio.apply()
 
 # Load Nigerian Fraud CSV file (update to relative path for deployment)
-df_nigerian_fraud = pd.read_csv('Nigerian_Fraud.csv')
+df_nigerian_fraud = pd.read_csv('/content/Nigerian_Fraud.csv')
 
 df_nigerian_fraud['text'] = df_nigerian_fraud['subject'].fillna('') + ' ' + df_nigerian_fraud['body']
 texts = df_nigerian_fraud['text'].tolist()
@@ -23,8 +33,7 @@ texts = df_nigerian_fraud['text'].tolist()
 embedding_model_name = "sentence-transformers/all-MiniLM-L6-v2"
 embeddings_model = HuggingFaceEmbeddings(model_name=embedding_model_name)
 
-# Use Chroma DB for storing and retrieving embeddings
-vector_store = Chroma.from_texts(
+vector_store = FAISS.from_texts(
     texts=texts,
     embedding=embeddings_model
 )
@@ -231,49 +240,52 @@ with gr.Blocks() as app:
             label="Summary of Analysis",
             interactive=False
         )
-        url_details_output = gr.Textbox(
-            label="Detailed Results",
+        url_detailed_output = gr.Textbox(
+            label="Detailed Engine Results",
             interactive=False
         )
-        url_suspicious_percentage_output = gr.Textbox(
-            label="Suspicious URL Percentage",
-            interactive=False
-        )
-        url_malicious_percentage_output = gr.Textbox(
-            label="Malicious URL Percentage",
-            interactive=False
-        )
+        url_suspicious_display = gr.HTML()
+        url_malicious_display = gr.HTML()
+
+        def handle_url(url):
+            stats, detailed_results, suspicious, malicious = asyncio.run(analyze_url(url))
+            return stats, detailed_results, create_dynamic_circular_display(suspicious, "Suspicious"), create_dynamic_circular_display(malicious, "Malicious")
+
         analyze_url_button = gr.Button("Analyze URL")
         analyze_url_button.click(
-            fn=analyze_url,
+            fn=handle_url,
             inputs=url_input,
-            outputs=[url_stats_output, url_details_output, url_suspicious_percentage_output, url_malicious_percentage_output]
+            outputs=[url_stats_output, url_detailed_output, url_suspicious_display, url_malicious_display]
         )
 
     # File analysis
     with gr.Tab("File Analysis"):
-        file_input = gr.File(label="Upload File to Analyze")
+        file_input = gr.File(
+            label="Upload File"
+        )
         file_stats_output = gr.Textbox(
-            label="Summary of File Analysis",
+            label="Summary of Analysis",
             interactive=False
         )
-        file_details_output = gr.Textbox(
-            label="File Scan Results",
+        file_detailed_output = gr.Textbox(
+            label="Detailed Engine Results",
             interactive=False
         )
-        file_suspicious_percentage_output = gr.Textbox(
-            label="Suspicious File Percentage",
-            interactive=False
-        )
-        file_malicious_percentage_output = gr.Textbox(
-            label="Malicious File Percentage",
-            interactive=False
-        )
+        file_suspicious_display = gr.HTML()
+        file_malicious_display = gr.HTML()
+
+        def handle_file(file):
+            if file is not None:
+                stats, detailed_results, suspicious, malicious = asyncio.run(analyze_file(file))
+                return stats, detailed_results, create_dynamic_circular_display(suspicious, "Suspicious"), create_dynamic_circular_display(malicious, "Malicious")
+            else:
+                return "No file uploaded", "", create_dynamic_circular_display(0, "Suspicious"), create_dynamic_circular_display(0, "Malicious")
+
         analyze_file_button = gr.Button("Analyze File")
         analyze_file_button.click(
-            fn=analyze_file,
+            fn=handle_file,
             inputs=file_input,
-            outputs=[file_stats_output, file_details_output, file_suspicious_percentage_output, file_malicious_percentage_output]
+            outputs=[file_stats_output, file_detailed_output, file_suspicious_display, file_malicious_display]
         )
 
     # Email Header Analysis
@@ -284,7 +296,9 @@ with gr.Blocks() as app:
             lines=10
         )
         header_analysis_output = gr.Textbox(
-            label="Email Header Analysis Results",
+            label="Header Analysis Results",
+            placeholder="Results of the email header analysis will be displayed here...",
+            lines=15,
             interactive=False
         )
         analyze_header_button = gr.Button("Analyze Header")
@@ -293,5 +307,9 @@ with gr.Blocks() as app:
             inputs=header_input,
             outputs=header_analysis_output
         )
+
+    gr.Markdown("""<h3>Disclaimer</h3>
+    Always exercise caution when interacting with suspicious content.
+    """)
 
 app.launch()
