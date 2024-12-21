@@ -7,5 +7,4 @@ langchain-huggingface
 vt-py
 nest-asyncio
 faiss-cpu
-pytorch
 torch
