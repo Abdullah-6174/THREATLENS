@@ -2,7 +2,7 @@ import gradio as gr
 import pandas as pd
 from groq import Groq
 from langchain.prompts import PromptTemplate
-from langchain_community.vectorstores import FAISS
+from langchain_community.vectorstores import VectorStoreIndex
 from langchain_huggingface import HuggingFaceEmbeddings
 import vt
 import asyncio
@@ -23,7 +23,8 @@ texts = df_nigerian_fraud['text'].tolist()
 embedding_model_name = "sentence-transformers/all-MiniLM-L6-v2"
 embeddings_model = HuggingFaceEmbeddings(model_name=embedding_model_name)
 
-vector_store = FAISS.from_texts(
+# Use LangChain's VectorStoreIndex for storing and retrieving embeddings
+vector_store = VectorStoreIndex.from_texts(
     texts=texts,
     embedding=embeddings_model
 )
