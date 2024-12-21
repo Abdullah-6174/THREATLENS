@@ -1,5 +1,4 @@
 streamlit
-gradio
 pandas
 groq
 langchain
