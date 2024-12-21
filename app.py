@@ -9,6 +9,7 @@ import asyncio
 import nest_asyncio
 import os
 import re
+from io import BytesIO
 
 # Enable nested event loops
 nest_asyncio.apply()
@@ -66,15 +67,18 @@ async def analyze_url(url):
         except Exception as e:
             return f"Error: {e}", "", 0, 0
 
+
 async def analyze_file(file_obj):
     async with load_virustotal_client() as client:
         try:
-            # Read the file as binary data using file_obj.read()
-            file_data = file_obj.read()
+            # Convert the uploaded file to a byte stream using BytesIO
+            byte_data = file_obj.getvalue()
+            byte_stream = BytesIO(byte_data)
+            
+            # Scan the file using the VirusTotal API
+            analysis = await client.scan_file_async(byte_stream)
 
-            # Perform the scan on the file data
-            analysis = await client.scan_file_async(file_data)
-
+            # Wait for the analysis to complete
             while True:
                 analysis = await client.get_object_async(f"/analyses/{analysis.id}")
                 if analysis.status == "completed":
