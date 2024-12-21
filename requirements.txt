@@ -6,6 +6,5 @@ langchain_community
 langchain-huggingface
 vt-py
 nest-asyncio
-faiss-gpu
 chromadb
 sqlite
