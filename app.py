@@ -27,11 +27,10 @@ def load_vector_store():
     embeddings_model = load_embedding_model()
     return FAISS.from_texts(texts=texts, embedding=embeddings_model)
 
-@st.cache_resource
 def load_groq_client():
     return Groq(api_key="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")
 
-@st.cache_resource
+
 def load_virustotal_client():
     return vt.Client("41f1d1b04eff54f6432b2f35578847353bb196694ecf51c098485c4ffb3e984f")
 
@@ -49,7 +48,7 @@ Below are phishing emails subject+email for your context, you only have to learn
 """
 
 # VirusTotal API helpers using the `vt-py` library
-@st.cache_data
+
 async def analyze_url(url):
     async with load_virustotal_client() as client:
         try:
@@ -67,7 +66,6 @@ async def analyze_url(url):
         except Exception as e:
             return f"Error: {e}", "", 0, 0
 
-@st.cache_data
 async def analyze_file(file_obj):
     async with load_virustotal_client() as client:
         try:
@@ -108,6 +106,26 @@ def process_content(content_text):
     )
     response = completion.choices[0].message.content
     return response
+
+def create_dynamic_circular_display(percentage, label):
+    # Calculate the stroke-dasharray and stroke-dashoffset for animation
+    stroke_dasharray = 2 * 3.14159 * 40  # Circumference of the circle
+    stroke_dashoffset = stroke_dasharray * (1 - percentage / 100)
+    # Color logic based on percentage values
+    color = 'red' if percentage > 50 else 'orange' if percentage > 20 else 'green'
+
+    return f"""
+    <div style='display: flex; flex-direction: column; align-items: center;'>
+        <svg width='100' height='100'>
+            <circle cx='50' cy='50' r='40' stroke='gray' stroke-width='10' fill='none'></circle>
+            <circle cx='50' cy='50' r='40' stroke='{color}' stroke-width='10' fill='none'
+                stroke-dasharray='{stroke_dasharray}' stroke-dashoffset='{stroke_dashoffset}'
+                transform='rotate(-90deg)' transform-origin='50% 50%'></circle>
+        </svg>
+        <div style='color: {color}; font-size: 16px; font-weight: bold;'>{label}: {percentage:.2f}%</div>
+    </div>
+    """
+
 
 def analyze_email_header(header):
     results = []
@@ -189,27 +207,34 @@ st.subheader("Phishing Content Detection")
 content_input = st.text_area("Paste Content", "Enter the content here...")
 if st.button("Analyze Content"):
     result = process_content(content_input)
-    st.text_area("Assessment and Recommendations", value=result, height=300, disabled=True)
+    st.markdown(f'<div style="color: red; font-weight: bold; font-size: 16px;">{result}</div>', unsafe_allow_html=True)
 
 st.subheader("URL Analysis")
 url_input = st.text_input("Enter URL", "")
 if st.button("Analyze URL"):
     stats, detailed_results, suspicious, malicious = asyncio.run(analyze_url(url_input))
-    st.text_area("Summary of Analysis", value=str(stats), height=150, disabled=True)
-    st.text_area("Detailed Engine Results", value=detailed_results, height=150, disabled=True)
+    st.markdown(f'<div style="color: red; font-weight: bold; font-size: 16px;">Summary: {stats}</div>', unsafe_allow_html=True)
+    st.markdown(f'<div style="color: red; font-weight: bold; font-size: 16px;">Details: {detailed_results}</div>', unsafe_allow_html=True)
+     
+    # Display dynamic percentage spinner for suspicious and malicious
+    st.markdown(create_dynamic_circular_display(suspicious, "Suspicious"), unsafe_allow_html=True)
+    st.markdown(create_dynamic_circular_display(malicious, "Malicious"), unsafe_allow_html=True)
 
-st.subheader("File Analysis")
-file_input = st.file_uploader("Upload File", type=['exe', 'bat', 'cmd', 'vbs', 'js', 'scr', 'pif', 'com', 'txt', 'pdf'])
+
 if st.button("Analyze File"):
     if file_input:
         stats, detailed_results, suspicious, malicious = asyncio.run(analyze_file(file_input))
-        st.text_area("Summary of Analysis", value=str(stats), height=150, disabled=True)
-        st.text_area("Detailed Engine Results", value=detailed_results, height=150, disabled=True)
+        st.markdown(f'<div style="color: red; font-weight: bold; font-size: 16px;">Summary: {stats}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="color: red; font-weight: bold; font-size: 16px;">Details: {detailed_results}</div>', unsafe_allow_html=True)
+
+        # Display dynamic percentage spinner for suspicious and malicious
+        st.markdown(create_dynamic_circular_display(suspicious, "Suspicious"), unsafe_allow_html=True)
+        st.markdown(create_dynamic_circular_display(malicious, "Malicious"), unsafe_allow_html=True)
     else:
-        st.text("No file uploaded")
+        st.markdown('<div style="color: red; font-weight: bold; font-size: 16px;">No file uploaded</div>', unsafe_allow_html=True)
 
 st.subheader("Email Header Analysis")
 header_input = st.text_area("Paste Email Header", "", height=200)
 if st.button("Analyze Header"):
     header_result = analyze_email_header(header_input)
-    st.text_area("Header Analysis Results", value=header_result, height=300, disabled=True)
+    st.markdown(f'<div style="color: red; font-weight: bold; font-size: 16px;">{header_result}</div>', unsafe_allow_html=True)
