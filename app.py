@@ -223,7 +223,6 @@ if st.button("Analyze URL"):
 st.subheader("File Analysis")
 file_input = st.file_uploader("Upload File", type=['exe', 'bat', 'cmd', 'vbs', 'js', 'scr', 'pif', 'com', 'txt', 'pdf'])
 if st.button("Analyze File"):
-if st.button("Analyze File"):
     if file_input:
         stats, detailed_results, suspicious, malicious = asyncio.run(analyze_file(file_input))
         st.markdown(f'<div style="color: red; font-weight: bold; font-size: 16px;">Summary: {stats}</div>', unsafe_allow_html=True)
