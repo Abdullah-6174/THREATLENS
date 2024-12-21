@@ -111,43 +111,75 @@ def process_content(content_text):
 
 def analyze_email_header(header):
     results = []
+
+    # Split the header into lines
     header_lines = header.splitlines()
 
+    # Variables to track Delivered-To and To fields
     delivered_to = None
     to = None
+
+    # Define suspicious file extensions for attachment checks
     suspicious_extensions = ['.exe', '.bat', '.cmd', '.vbs', '.js', '.scr', '.pif', '.com']
 
+    # Process each line in the header
     for line in header_lines:
         lower_line = line.lower()
+
+        # Check Delivered-To and To fields
         if line.startswith("Delivered-To:"):
             delivered_to = line.split("Delivered-To:")[1].strip()
         elif line.startswith("To:"):
             to = line.split("To:")[1].strip()
 
+        # DKIM, SPF, and DMARC checks with detailed reasoning
         if "dkim=fail" in lower_line:
-            results.append(f"DKIM check failed: {line.strip()}. This indicates potential spoofing.")
+            results.append(
+                f"DKIM check failed: {line.strip()}. "
+                "This indicates the email's DKIM signature does not match the expected value. "
+                "It could mean the email was altered in transit, suggesting potential spoofing or tampering."
+            )
         if "spf=fail" in lower_line:
-            results.append(f"SPF check failed: {line.strip()}. This could be a spoofed email.")
+            results.append(
+                f"SPF check failed: {line.strip()}. "
+                "This means the sender's IP address is not authorized to send emails for the domain specified in the From field. "
+                "It could indicate that the email is being sent from a spoofed or malicious source."
+            )
         if "dmarc=fail" in lower_line:
-            results.append(f"DMARC check failed: {line.strip()}. This might be phishing.")
+            results.append(
+                f"DMARC check failed: {line.strip()}. "
+                "This indicates the domain failed alignment with the email's SPF and DKIM records, "
+                "or the domain's policy requires rejection for unauthorized emails. "
+                "It suggests the email might not be legitimate and could be phishing."
+            )
 
+        # Check DKIM-Signature
+        if "dkim-signature" in lower_line:
+            pass  # Acknowledge the presence of a DKIM-Signature
+
+        # Attachment checks for suspicious file extensions
         attachment_matches = re.findall(r'filename="([^"]+)"', line)
         for match in attachment_matches:
             for ext in suspicious_extensions:
                 if match.lower().endswith(ext):
                     results.append(f"Suspicious attachment detected: {match} ({ext} file extension).")
 
+    # Final checks after scanning all lines
     if delivered_to and to and delivered_to != to:
-        results.append("Mismatch between 'Delivered-To' and 'To' fields.")
+        results.append("Mismatch between 'Delivered-To' and 'To' fields. This might indicate email spoofing.")
 
+    # Received field hops check (example threshold: 10 hops)
     received_fields = [line for line in header_lines if line.startswith("Received:")]
-    if len(received_fields) > 10:
-        results.append("Too many hops in 'Received' fields, indicating potential spoofing.")
+    if len(received_fields) > 10:  # Arbitrary threshold
+        results.append("Too many hops in 'Received' fields, indicating potential spoofing or forwarding.")
 
+    # Check for missing DKIM-Signature
     if not any("dkim-signature" in line.lower() for line in header_lines):
         results.append("Missing DKIM-Signature: The email is not authenticated via DKIM.")
 
+    # Return the final results
     return "\n".join(results) if results else "Header appears legitimate."
+
 
 # Streamlit app layout
 st.title("THREATLENS")
