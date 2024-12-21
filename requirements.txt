@@ -7,4 +7,4 @@ langchain_community
 langchain-huggingface
 vt-py
 nest-asyncio
-faiss-gpu
+faiss-gpu==1.7.3
