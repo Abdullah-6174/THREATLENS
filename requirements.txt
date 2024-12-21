@@ -6,5 +6,4 @@ langchain_community
 langchain-huggingface
 vt-py
 nest-asyncio
-faiss-gpu==1.6.4
 torch
