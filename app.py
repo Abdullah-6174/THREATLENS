@@ -1,13 +1,3 @@
-!pip install gradio
-!pip install pandas
-!pip install groq
-!pip install langchain
-!pip install langchain_community
-!pip install langchain-huggingface
-!pip install vt-py
-!pip install nest-asyncio
-!pip install faiss-gpu
-
 import gradio as gr
 import pandas as pd
 from groq import Groq
@@ -25,7 +15,7 @@ import re
 nest_asyncio.apply()
 
 # Load Nigerian Fraud CSV file (update to relative path for deployment)
-df_nigerian_fraud = pd.read_csv('/content/Nigerian_Fraud.csv')
+df_nigerian_fraud = pd.read_csv('Nigerian_Fraud.csv')
 
 df_nigerian_fraud['text'] = df_nigerian_fraud['subject'].fillna('') + ' ' + df_nigerian_fraud['body']
 texts = df_nigerian_fraud['text'].tolist()
