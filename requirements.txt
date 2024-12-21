@@ -6,5 +6,5 @@ langchain_community
 langchain-huggingface
 vt-py
 nest-asyncio
-faiss-cpu
+faiss-gpu
 torch
