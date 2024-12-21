@@ -7,3 +7,5 @@ langchain_community
 langchain-huggingface
 vt-py
 nest-asyncio
+pip 
+pip install faiss-gpu
