@@ -1,4 +1,4 @@
-import gradio as gr
+import streamlit as st
 import pandas as pd
 from groq import Groq
 from langchain.prompts import PromptTemplate
@@ -14,9 +14,8 @@ import re
 # Enable nested event loops
 nest_asyncio.apply()
 
-# Load Nigerian Fraud CSV file (update to relative path for deployment)
+# Load Nigerian Fraud CSV file
 df_nigerian_fraud = pd.read_csv('Nigerian_Fraud.csv')
-
 df_nigerian_fraud['text'] = df_nigerian_fraud['subject'].fillna('') + ' ' + df_nigerian_fraud['body']
 texts = df_nigerian_fraud['text'].tolist()
 
@@ -60,18 +59,15 @@ async def analyze_url(url):
 async def analyze_file(file_obj):
     async with vt.Client(virustotal_api_key) as client:
         try:
-            # Read the file as a binary stream
             with open(file_obj.name, "rb") as f:
                 analysis = await client.scan_file_async(f)
 
-            # Poll the status of the analysis
             while True:
                 analysis = await client.get_object_async(f"/analyses/{analysis.id}")
                 if analysis.status == "completed":
                     break
                 await asyncio.sleep(10)
 
-            # Fetch final analysis results
             stats = analysis.stats
             scan_results = analysis.results
 
@@ -101,12 +97,9 @@ def process_content(content_text):
     response = completion.choices[0].message.content
     return response
 
-# Helper function to create dynamic circular percentage display
 def create_dynamic_circular_display(percentage, label):
-    # Calculate the stroke-dasharray and stroke-dashoffset for animation
-    stroke_dasharray = 2 * 3.14159 * 40  # Circumference of the circle
+    stroke_dasharray = 2 * 3.14159 * 40
     stroke_dashoffset = stroke_dasharray * (1 - percentage / 100)
-    # Color logic based on percentage values
     color = 'red' if percentage > 50 else 'orange' if percentage > 20 else 'green'
 
     return f"""
@@ -121,185 +114,91 @@ def create_dynamic_circular_display(percentage, label):
     </div>
     """
 
-# Email header analysis with DKIM, DMARC, SPF checks, and dangerous file extensions detection
-
 def analyze_email_header(header):
     results = []
 
-    # Split the header into lines
     header_lines = header.splitlines()
 
-    # Variables to track Delivered-To and To fields
     delivered_to = None
     to = None
 
-    # Define suspicious file extensions for attachment checks
     suspicious_extensions = ['.exe', '.bat', '.cmd', '.vbs', '.js', '.scr', '.pif', '.com']
 
-    # Process each line in the header
     for line in header_lines:
         lower_line = line.lower()
 
-        # Check Delivered-To and To fields
         if line.startswith("Delivered-To:"):
             delivered_to = line.split("Delivered-To:")[1].strip()
         elif line.startswith("To:"):
             to = line.split("To:")[1].strip()
 
-        # DKIM, SPF, and DMARC checks with detailed reasoning
         if "dkim=fail" in lower_line:
-            results.append(
-                f"DKIM check failed: {line.strip()}. "
-                "This indicates the email's DKIM signature does not match the expected value. "
-                "It could mean the email was altered in transit, suggesting potential spoofing or tampering."
-            )
+            results.append(f"DKIM check failed: {line.strip()}. This indicates potential spoofing.")
         if "spf=fail" in lower_line:
-            results.append(
-                f"SPF check failed: {line.strip()}. "
-                "This means the sender's IP address is not authorized to send emails for the domain specified in the From field. "
-                "It could indicate that the email is being sent from a spoofed or malicious source."
-            )
+            results.append(f"SPF check failed: {line.strip()}. This could be a spoofed email.")
         if "dmarc=fail" in lower_line:
-            results.append(
-                f"DMARC check failed: {line.strip()}. "
-                "This indicates the domain failed alignment with the email's SPF and DKIM records, "
-                "or the domain's policy requires rejection for unauthorized emails. "
-                "It suggests the email might not be legitimate and could be phishing."
-            )
+            results.append(f"DMARC check failed: {line.strip()}. This might be phishing.")
 
-        # Check DKIM-Signature
-        if "dkim-signature" in lower_line:
-            pass  # Acknowledge the presence of a DKIM-Signature
-
-        # Attachment checks for suspicious file extensions
         attachment_matches = re.findall(r'filename="([^"]+)"', line)
         for match in attachment_matches:
             for ext in suspicious_extensions:
                 if match.lower().endswith(ext):
                     results.append(f"Suspicious attachment detected: {match} ({ext} file extension).")
 
-    # Final checks after scanning all lines
     if delivered_to and to and delivered_to != to:
-        results.append("Mismatch between 'Delivered-To' and 'To' fields. This might indicate email spoofing.")
+        results.append("Mismatch between 'Delivered-To' and 'To' fields.")
 
-    # Received field hops check (example threshold: 10 hops)
     received_fields = [line for line in header_lines if line.startswith("Received:")]
-    if len(received_fields) > 10:  # Arbitrary threshold
-        results.append("Too many hops in 'Received' fields, indicating potential spoofing or forwarding.")
+    if len(received_fields) > 10:
+        results.append("Too many hops in 'Received' fields, indicating potential spoofing.")
 
-    # Check for missing DKIM-Signature
     if not any("dkim-signature" in line.lower() for line in header_lines):
         results.append("Missing DKIM-Signature: The email is not authenticated via DKIM.")
 
-    # Return the final results
     return "\n".join(results) if results else "Header appears legitimate."
 
-# Gradio app
-with gr.Blocks() as app:
-    gr.Markdown("""<h1>THREATLENS</h1>
-    Use this app to analyze emails, URLs, and files for phishing or malicious content.
-    """)
+# Streamlit app layout
+st.title("THREATLENS")
+st.markdown("""
+Use this app to analyze emails, URLs, and files for phishing or malicious content.
+""")
 
-    # Phishing content detection
-    with gr.Tab("Phishing Content Detection"):
-        content_input = gr.Textbox(
-            label="Paste Content",
-            placeholder="Enter the content here...",
-            lines=10
-        )
-        result_output = gr.Textbox(
-            label="Assessment and Recommendations",
-            placeholder="Results will be displayed here...",
-            lines=15,
-            interactive=False
-        )
-        analyze_content_button = gr.Button("Analyze Content")
-        analyze_content_button.click(
-            fn=process_content,
-            inputs=content_input,
-            outputs=result_output
-        )
+# Phishing content detection
+st.subheader("Phishing Content Detection")
+content_input = st.text_area(
+    label="Paste Content",
+    placeholder="Enter the content here..."
+)
+if st.button("Analyze Content"):
+    result = process_content(content_input)
+    st.text_area("Assessment and Recommendations", value=result, height=300, disabled=True)
 
-    # URL analysis
-    with gr.Tab("URL Analysis"):
-        url_input = gr.Textbox(
-            label="Enter URL",
-            placeholder="Enter a URL to analyze..."
-        )
-        url_stats_output = gr.Textbox(
-            label="Summary of Analysis",
-            interactive=False
-        )
-        url_detailed_output = gr.Textbox(
-            label="Detailed Engine Results",
-            interactive=False
-        )
-        url_suspicious_display = gr.HTML()
-        url_malicious_display = gr.HTML()
+# URL analysis
+st.subheader("URL Analysis")
+url_input = st.text_input("Enter URL", "")
+if st.button("Analyze URL"):
+    stats, detailed_results, suspicious, malicious = asyncio.run(analyze_url(url_input))
+    st.text_area("Summary of Analysis", value=str(stats), height=150, disabled=True)
+    st.text_area("Detailed Engine Results", value=detailed_results, height=150, disabled=True)
+    st.markdown(suspicious)
+    st.markdown(malicious)
 
-        def handle_url(url):
-            stats, detailed_results, suspicious, malicious = asyncio.run(analyze_url(url))
-            return stats, detailed_results, create_dynamic_circular_display(suspicious, "Suspicious"), create_dynamic_circular_display(malicious, "Malicious")
+# File analysis
+st.subheader("File Analysis")
+file_input = st.file_uploader("Upload File", type=['exe', 'bat', 'cmd', 'vbs', 'js', 'scr', 'pif', 'com', 'txt', 'pdf'])
+if st.button("Analyze File"):
+    if file_input:
+        stats, detailed_results, suspicious, malicious = asyncio.run(analyze_file(file_input))
+        st.text_area("Summary of Analysis", value=str(stats), height=150, disabled=True)
+        st.text_area("Detailed Engine Results", value=detailed_results, height=150, disabled=True)
+        st.markdown(suspicious)
+        st.markdown(malicious)
+    else:
+        st.text("No file uploaded")
 
-        analyze_url_button = gr.Button("Analyze URL")
-        analyze_url_button.click(
-            fn=handle_url,
-            inputs=url_input,
-            outputs=[url_stats_output, url_detailed_output, url_suspicious_display, url_malicious_display]
-        )
-
-    # File analysis
-    with gr.Tab("File Analysis"):
-        file_input = gr.File(
-            label="Upload File"
-        )
-        file_stats_output = gr.Textbox(
-            label="Summary of Analysis",
-            interactive=False
-        )
-        file_detailed_output = gr.Textbox(
-            label="Detailed Engine Results",
-            interactive=False
-        )
-        file_suspicious_display = gr.HTML()
-        file_malicious_display = gr.HTML()
-
-        def handle_file(file):
-            if file is not None:
-                stats, detailed_results, suspicious, malicious = asyncio.run(analyze_file(file))
-                return stats, detailed_results, create_dynamic_circular_display(suspicious, "Suspicious"), create_dynamic_circular_display(malicious, "Malicious")
-            else:
-                return "No file uploaded", "", create_dynamic_circular_display(0, "Suspicious"), create_dynamic_circular_display(0, "Malicious")
-
-        analyze_file_button = gr.Button("Analyze File")
-        analyze_file_button.click(
-            fn=handle_file,
-            inputs=file_input,
-            outputs=[file_stats_output, file_detailed_output, file_suspicious_display, file_malicious_display]
-        )
-
-    # Email Header Analysis
-    with gr.Tab("Email Header Analysis"):
-        header_input = gr.Textbox(
-            label="Paste Email Header",
-            placeholder="Paste the raw email header here...",
-            lines=10
-        )
-        header_analysis_output = gr.Textbox(
-            label="Header Analysis Results",
-            placeholder="Results of the email header analysis will be displayed here...",
-            lines=15,
-            interactive=False
-        )
-        analyze_header_button = gr.Button("Analyze Header")
-        analyze_header_button.click(
-            fn=analyze_email_header,
-            inputs=header_input,
-            outputs=header_analysis_output
-        )
-
-    gr.Markdown("""<h3>Disclaimer</h3>
-    Always exercise caution when interacting with suspicious content.
-    """)
-
-app.launch()
+# Email Header Analysis
+st.subheader("Email Header Analysis")
+header_input = st.text_area("Paste Email Header", "", height=200)
+if st.button("Analyze Header"):
+    header_result = analyze_email_header(header_input)
+    st.text_area("Header Analysis Results", value=header_result, height=300, disabled=True)
