@@ -1,4 +1,3 @@
-faiss-gpu==1.5.3
 streamlit
 gradio
 pandas
