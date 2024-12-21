@@ -1,7 +1,10 @@
 streamlit
+gradio
 pandas
-langchain-community
-langchain-huggingface
 groq
-sentence-transformers
-faiss-cpu
+langchain
+langchain_community
+langchain-huggingface
+vt-py
+nest-asyncio
+faiss-gpu
