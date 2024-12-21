@@ -1,4 +1,3 @@
-streamlit
 gradio
 pandas
 groq
@@ -7,4 +6,5 @@ langchain_community
 langchain-huggingface
 vt-py
 nest-asyncio
-faiss-gpu==1.7.3+cu112
+chromadb
+sentence-transformers
