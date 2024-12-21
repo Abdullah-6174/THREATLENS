@@ -1,3 +1,5 @@
+pip install faiss-gpu
+
 import gradio as gr
 import pandas as pd
 from groq import Groq
