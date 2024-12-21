@@ -220,7 +220,9 @@ if st.button("Analyze URL"):
     st.markdown(create_dynamic_circular_display(suspicious, "Suspicious"), unsafe_allow_html=True)
     st.markdown(create_dynamic_circular_display(malicious, "Malicious"), unsafe_allow_html=True)
 
-
+st.subheader("File Analysis")
+file_input = st.file_uploader("Upload File", type=['exe', 'bat', 'cmd', 'vbs', 'js', 'scr', 'pif', 'com', 'txt', 'pdf'])
+if st.button("Analyze File"):
 if st.button("Analyze File"):
     if file_input:
         stats, detailed_results, suspicious, malicious = asyncio.run(analyze_file(file_input))
