@@ -104,7 +104,7 @@ def process_content(content_text):
     formatted_prompt = prompt.format(email_text=content_text, retrieved_data=retrieved_data)
 
     completion = client.chat.completions.create(
-        model="llama3-groq-70b-8192-tool-use-preview",
+        model="llama3-70b-8192",
         messages=[{"role": "user", "content": formatted_prompt}],
         temperature=0.5,
         max_tokens=8170,
